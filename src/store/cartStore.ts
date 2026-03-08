@@ -1,13 +1,22 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export interface CartItem {
+export interface CartItemExtra {
   id: string;
   name: string;
   price: number;
   quantity: number;
-  // Optional image or icon for display in the cart
+}
+
+export interface CartItem {
+  cartItemId: string; // Unique ID for this specific item configuration
+  id: string;         // Base Product ID
+  name: string;
+  price: number;
+  quantity: number;
   icon?: string; 
+  extras?: CartItemExtra[];
+  comment?: string;
 }
 
 interface CartState {
@@ -15,12 +24,25 @@ interface CartState {
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  addItem: (item: Omit<CartItem, 'cartItemId'>) => void;
+  removeItem: (cartItemId: string) => void;
+  updateQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  getItemPrice: (item: CartItem) => number;
+}
+
+// Function to generate a unique ID based on product, extras, and comment
+const generateCartItemId = (item: Omit<CartItem, 'cartItemId'>) => {
+  const extrasString = item.extras ? item.extras.map(e => `${e.id}-${e.quantity}`).sort().join('|') : '';
+  const commentString = item.comment ? item.comment.trim().toLowerCase() : '';
+  return `${item.id}-${extrasString}-${commentString}`;
+}
+
+const calculateItemUnitTotal = (item: Omit<CartItem, 'cartItemId'>): number => {
+  const extrasTotal = item.extras?.reduce((sum, extra) => sum + (extra.price * extra.quantity), 0) || 0;
+  return item.price + extrasTotal;
 }
 
 export const useCartStore = create<CartState>()(
@@ -32,32 +54,35 @@ export const useCartStore = create<CartState>()(
       openCart: () => set({ isCartOpen: true }),
       closeCart: () => set({ isCartOpen: false }),
       
-      addItem: (newItem) => set((state) => {
-        const existingItemIndex = state.items.findIndex(item => item.id === newItem.id);
+      addItem: (newItemInput) => set((state) => {
+        const cartItemId = generateCartItemId(newItemInput);
+        const newItem = { ...newItemInput, cartItemId } as CartItem;
+        
+        const existingItemIndex = state.items.findIndex(item => item.cartItemId === cartItemId);
         
         if (existingItemIndex >= 0) {
-          // Update existing item
+          // If perfectly identical, just update quantity
           const updatedItems = [...state.items];
           updatedItems[existingItemIndex].quantity += newItem.quantity;
           return { items: updatedItems };
         } else {
-          // Add new item
+          // Otherwise add as new line item
           return { items: [...state.items, newItem] };
         }
       }),
       
-      removeItem: (id) => set((state) => ({
-        items: state.items.filter(item => item.id !== id)
+      removeItem: (cartItemId) => set((state) => ({
+        items: state.items.filter(item => item.cartItemId !== cartItemId)
       })),
       
-      updateQuantity: (id, quantity) => set((state) => {
+      updateQuantity: (cartItemId, quantity) => set((state) => {
         if (quantity <= 0) {
-          return { items: state.items.filter(item => item.id !== id) };
+          return { items: state.items.filter(item => item.cartItemId !== cartItemId) };
         }
         
         return {
           items: state.items.map(item => 
-            item.id === id ? { ...item, quantity } : item
+            item.cartItemId === cartItemId ? { ...item, quantity } : item
           )
         };
       }),
@@ -67,13 +92,17 @@ export const useCartStore = create<CartState>()(
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0);
       },
+
+      getItemPrice: (item) => {
+        return calculateItemUnitTotal(item) * item.quantity;
+      },
       
       getTotalPrice: () => {
-        return get().items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        return get().items.reduce((total, item) => total + (calculateItemUnitTotal(item) * item.quantity), 0);
       }
     }),
     {
-      name: 'recanto-cart-storage', // name of item in the storage (must be unique)
+      name: 'recanto-cart-storage-v2', // bumped storage name due to schema change so it doesn't crash existing users
     }
   )
 )

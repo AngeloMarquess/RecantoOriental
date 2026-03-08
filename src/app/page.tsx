@@ -1,7 +1,7 @@
-import { ChevronRight, MapPin, Search, Star, Clock, Utensils, UserCircle, LogOut } from "lucide-react";
+import { ChevronRight, MapPin, Search, Star, Clock, Utensils, UserCircle, LogOut, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import CartButton from "@/components/CartButton";
-import AddToCartButton from "@/components/AddToCartButton";
+import ProductDetailModal from "@/components/ProductDetailModal";
 import { createClient } from "@/utils/supabase/server";
 import { logout } from "./auth/actions";
 
@@ -42,6 +42,9 @@ export default async function Home({
             {user ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium hidden sm:block">Olá, {firstName}</span>
+                <Link href="/pedidos" className="p-2 hover:bg-white/20 rounded-full transition" title="Meus Pedidos">
+                  <ClipboardList size={18} />
+                </Link>
                 <form action={logout}>
                   <button type="submit" className="p-2 hover:bg-white/20 rounded-full transition" title="Sair" suppressHydrationWarning>
                     <LogOut size={18} />
@@ -164,37 +167,60 @@ export default async function Home({
                 <p className="text-stone-500 text-sm">Nenhum produto cadastrado no momento.</p>
               </div>
             ) : (
-              products?.map((item) => (
-                <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-stone-100 flex gap-4 hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="w-24 h-24 bg-stone-50 border border-stone-100 rounded-lg flex items-center justify-center text-4xl flex-shrink-0">
-                    {/* Using simple emojis if no image is uploaded */}
-                    {item.name.toLowerCase().includes('temaki') ? '🍙' : 
-                     item.name.toLowerCase().includes('yakisoba') ? '🍜' : 
-                     item.name.toLowerCase().includes('combinado') ? '🍣' : 
-                     item.name.toLowerCase().includes('ceviche') ? '🥗' : '🍱'}
-                  </div>
-                  <div className="flex flex-col flex-grow py-1">
-                    <h4 className="font-bold text-stone-800 text-sm leading-tight mb-1">{item.name}</h4>
-                    {item.description && (
-                      <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-auto">{item.description}</p>
-                    )}
-                    <div className="flex items-center justify-between mt-auto pt-2">
-                      <span className="font-bold text-primary text-base">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
-                      <AddToCartButton 
-                        product={{
-                          id: item.id,
-                          name: item.name,
-                          price: Number(item.price),
-                          icon: item.name.toLowerCase().includes('temaki') ? '🍙' : 
-                                item.name.toLowerCase().includes('yakisoba') ? '🍜' : 
-                                item.name.toLowerCase().includes('combinado') ? '🍣' : 
-                                item.name.toLowerCase().includes('ceviche') ? '🥗' : '🍱'
-                        }} 
-                      />
+              products?.map((item) => {
+                const icon = item.name.toLowerCase().includes('temaki') ? '🍙' : 
+                             item.name.toLowerCase().includes('yakisoba') ? '🍜' : 
+                             item.name.toLowerCase().includes('combinado') ? '🍣' : 
+                             item.name.toLowerCase().includes('ceviche') ? '🥗' : '🍱';
+
+                return (
+                  <ProductDetailModal 
+                    key={item.id}
+                    product={{
+                      id: item.id,
+                      name: item.name,
+                      price: Number(item.price),
+                      description: item.description,
+                      icon: icon,
+                      image_url: item.image_url,
+                      original_price: item.original_price ? Number(item.original_price) : undefined,
+                      serves: item.serves
+                    }}
+                  >
+                    <div className="bg-white p-3 rounded-xl shadow-sm border border-stone-100 flex gap-4 hover:shadow-md transition-shadow cursor-pointer text-left focus:outline-none overflow-hidden h-32">
+                      <div className="w-28 h-auto bg-stone-50 border border-stone-100 rounded-lg flex items-center justify-center text-4xl flex-shrink-0 relative overflow-hidden">
+                        {item.image_url ? (
+                          <img src={item.image_url} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          icon
+                        )}
+                      </div>
+                      <div className="flex flex-col flex-grow py-1 justify-between min-w-0">
+                        <div>
+                          <h4 className="font-bold text-stone-800 text-sm leading-tight mb-1 truncate">{item.name}</h4>
+                          {item.description && (
+                            <p className="text-xs text-stone-500 line-clamp-2 leading-snug">{item.description}</p>
+                          )}
+                          {item.serves && (
+                            <p className="text-[10px] text-stone-400 mt-1 flex items-center gap-1 font-medium">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              Serve {item.serves} pessoa{item.serves > 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          {item.original_price && Number(item.original_price) > Number(item.price) && (
+                            <span className="text-xs text-stone-400 line-through font-medium">
+                              R$ {Number(item.original_price).toFixed(2).replace('.', ',')}
+                            </span>
+                          )}
+                          <span className="font-bold text-primary text-base">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))
+                  </ProductDetailModal>
+                )
+              })
             )}
           </div>
         </section>

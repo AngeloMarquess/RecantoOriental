@@ -9,9 +9,13 @@ type OrderPayload = {
   paymentMethod: string;
   totalAmount: number;
   items: {
-    id: string;
+    cartItemId: string;
+    id: string; // product_id
+    name?: string;
     quantity: number;
     price: number;
+    extras?: any;
+    comment?: string;
   }[]
 }
 
@@ -38,7 +42,8 @@ export async function createOrder(payload: OrderPayload) {
         status: 'pending',
         total_amount: payload.totalAmount,
         delivery_address: `${payload.address}${payload.reference ? ' - ' + payload.reference : ''}`,
-        payment_method: payload.paymentMethod === 'dinheiro' ? 'cash' : 'card_machine'
+        payment_method: payload.paymentMethod === 'dinheiro' ? 'cash' : 
+                        payload.paymentMethod === 'online' ? 'online_stripe' : 'card_machine'
       })
       .select()
       .single()
@@ -54,7 +59,9 @@ export async function createOrder(payload: OrderPayload) {
       product_id: item.id,
       quantity: item.quantity,
       unit_price: item.price,
-      total_price: item.price * item.quantity
+      total_price: item.price * item.quantity,
+      extras: item.extras || null,
+      comment: item.comment || null
     }))
 
     const { error: itemsError } = await adminSupabase

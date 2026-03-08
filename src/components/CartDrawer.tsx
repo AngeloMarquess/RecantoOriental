@@ -17,7 +17,7 @@ export default function CartDrawer() {
 
   if (!mounted) return null
 
-  const { items, isCartOpen, closeCart, updateQuantity, removeItem, getTotalPrice } = cartState
+  const { items, isCartOpen, closeCart, updateQuantity, removeItem, getTotalPrice, getItemPrice } = cartState
   
   // Format currency
   const formatPrice = (price: number) => {
@@ -70,45 +70,64 @@ export default function CartDrawer() {
           ) : (
             <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex gap-3">
-                  <div className="w-16 h-16 bg-stone-50 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
-                    {item.icon || '🥡'}
-                  </div>
-                  
-                  <div className="flex flex-col flex-1 py-1">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-bold text-stone-800 text-sm leading-tight line-clamp-2">{item.name}</h4>
-                      <button 
-                        onClick={() => removeItem(item.id)}
-                        className="text-stone-300 hover:text-red-500 transition-colors shrink-0 ml-2"
-                        title="Remover item"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                <div key={item.cartItemId} className="bg-white p-3 rounded-xl border border-stone-100 shadow-sm flex flex-col gap-2">
+                  <div className="flex gap-3">
+                    <div className="w-16 h-16 bg-stone-50 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
+                      {item.icon || '🥡'}
                     </div>
                     
-                    <div className="flex items-center justify-between mt-auto">
-                      <span className="font-bold text-primary text-sm">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
+                    <div className="flex flex-col flex-1 py-1">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-stone-800 text-sm leading-tight line-clamp-2">{item.name}</h4>
+                        <button 
+                          onClick={() => removeItem(item.cartItemId)}
+                          className="text-stone-300 hover:text-red-500 transition-colors shrink-0 ml-2"
+                          title="Remover item"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {/* Details (Extras & Comments) */}
+                      {(item.extras?.length || item.comment) && (
+                        <div className="mb-2 text-xs text-stone-500 space-y-1">
+                          {item.extras?.map(extra => (
+                            <div key={extra.id} className="flex justify-between">
+                              <span>+ {extra.quantity}x {extra.name}</span>
+                              <span>{formatPrice(extra.price * extra.quantity)}</span>
+                            </div>
+                          ))}
+                          {item.comment && (
+                            <div className="italic mt-1 text-stone-400">
+                              Obs: {item.comment}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
-                      {/* Quantity Controls */}
-                      <div className="flex items-center bg-stone-100 rounded-lg border border-stone-200">
-                        <button 
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-primary transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="w-6 text-center text-sm font-bold text-stone-800">
-                          {item.quantity}
+                      <div className="flex items-center justify-between mt-auto">
+                        <span className="font-bold text-primary text-sm">
+                          {formatPrice(getItemPrice(item))}
                         </span>
-                        <button 
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-primary transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
+                        
+                        {/* Quantity Controls */}
+                        <div className="flex items-center bg-stone-100 rounded-lg border border-stone-200">
+                          <button 
+                            onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)}
+                            className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-primary transition-colors"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-6 text-center text-sm font-bold text-stone-800">
+                            {item.quantity}
+                          </span>
+                          <button 
+                            onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
+                            className="w-7 h-7 flex items-center justify-center text-stone-600 hover:text-primary transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

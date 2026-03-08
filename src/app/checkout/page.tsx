@@ -10,7 +10,7 @@ import { createOrder } from './actions'
 export default function CheckoutPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const { items, getTotalPrice, clearCart } = useCartStore()
+  const { items, getTotalPrice, getItemPrice, clearCart } = useCartStore()
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -48,7 +48,15 @@ export default function CheckoutPage() {
         address,
         reference,
         paymentMethod,
-        items: items.map(item => ({ id: item.id, quantity: item.quantity, price: item.price })),
+        items: items.map(item => ({ 
+          cartItemId: item.cartItemId,
+          id: item.id, 
+          name: item.name,
+          quantity: item.quantity, 
+          price: getItemPrice(item) / item.quantity,
+          extras: item.extras,
+          comment: item.comment
+        })),
         totalAmount: getTotalPrice()
       })
 
@@ -57,8 +65,43 @@ export default function CheckoutPage() {
         setIsSubmitting(false)
       } else {
         isNavigating.current = true
+        
+        // If payment method is online, redirect to Stripe
+        if (paymentMethod === 'online') {
+          try {
+            const stripeRes = await fetch('/api/stripe/checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: items,
+                orderId: result.orderId,
+                // Optional email could go here
+              })
+            });
+            
+            const data = await stripeRes.json()
+            
+            if (data.url) {
+              window.location.href = data.url
+              return // Leave page
+            } else {
+              throw new Error(data.error || 'Failed to initialize payment')
+            }
+          } catch (stripeErr) {
+            console.error(stripeErr)
+            setError('Pedido criado, mas falha ao abrir o pagamento online. Você poderá pagar na entrega.')
+            setIsSubmitting(false)
+            // Fallback: Clear cart and go to tracking anyway since order is created
+            setTimeout(() => {
+              clearCart()
+              router.push(`/pedidos/${result.orderId}`)
+            }, 3000)
+            return
+          }
+        }
+
         clearCart()
-        // Here we redirect to the realtime order status page!
+        // Here we redirect to the realtime order status page for cash/card_machine!
         router.push(`/pedidos/${result.orderId}`)
       }
     } catch (err: any) {
@@ -131,7 +174,7 @@ export default function CheckoutPage() {
               Pagamento na Entrega
             </h2>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <label className="relative cursor-pointer">
                 <input type="radio" name="payment_method" value="dinheiro" className="peer sr-only" required suppressHydrationWarning />
                 <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
@@ -144,7 +187,15 @@ export default function CheckoutPage() {
                 <input type="radio" name="payment_method" value="cartao_maquineta" className="peer sr-only" suppressHydrationWarning />
                 <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
                   <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
-                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">Cartão (Máquina)</span>
+                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">No Cartão (Presencial)</span>
+                </div>
+              </label>
+
+              <label className="relative cursor-pointer">
+                <input type="radio" name="payment_method" value="online" className="peer sr-only" suppressHydrationWarning />
+                <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
+                  <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
+                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">Pagar Agora (Online)</span>
                 </div>
               </label>
             </div>
@@ -159,9 +210,15 @@ export default function CheckoutPage() {
             
             <div className="space-y-3 mb-4">
               {items.map(item => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span className="text-stone-600">{item.quantity}x {item.name}</span>
-                  <span className="font-medium text-stone-800">{formatPrice(item.price * item.quantity)}</span>
+                <div key={item.cartItemId} className="flex flex-col text-sm border-b border-stone-50 pb-2 last:border-0 last:pb-0">
+                  <div className="flex justify-between">
+                    <span className="text-stone-600 font-medium">{item.quantity}x {item.name}</span>
+                    <span className="font-medium text-stone-800">{formatPrice(getItemPrice(item))}</span>
+                  </div>
+                  {item.extras?.map(extra => (
+                    <span key={extra.id} className="text-stone-400 text-xs pl-4">+ {extra.quantity}x {extra.name}</span>
+                  ))}
+                  {item.comment && <span className="text-stone-400 text-xs italic pl-4">Obs: {item.comment}</span>}
                 </div>
               ))}
             </div>

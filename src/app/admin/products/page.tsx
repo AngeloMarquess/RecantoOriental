@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createProduct, deleteProduct, toggleProductAvailability } from '../actions'
-import { Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Trash2, Edit2 } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function ProductsPage({
   searchParams,
@@ -74,9 +75,13 @@ export default async function ProductsPage({
                 Adicionar
               </button>
             </div>
-            <div className="md:col-span-4">
+            <div className="md:col-span-2">
               <label className="block text-xs font-medium text-stone-500 mb-1">Descrição</label>
               <input name="description" type="text" className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" placeholder="Detalhes do prato" suppressHydrationWarning />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-stone-500 mb-1">Foto do Produto (Opcional)</label>
+              <input name="image" type="file" accept="image/*" className="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer bg-white border border-stone-300 rounded-lg focus:ring-primary focus:border-primary" suppressHydrationWarning />
             </div>
           </form>
         )}
@@ -115,7 +120,10 @@ export default async function ProductsPage({
                       </button>
                     </form>
                   </td>
-                  <td className="px-6 py-3 text-right whitespace-nowrap">
+                  <td className="px-6 py-3 text-right whitespace-nowrap flex items-center justify-end gap-2">
+                    <Link href={`/admin/products/${prod.id}`} className="text-blue-500 hover:text-blue-700 p-1 rounded transition" title="Editar">
+                      <Edit2 size={16} />
+                    </Link>
                     <form action={async () => {
                       'use server'
                       await deleteProduct(prod.id)

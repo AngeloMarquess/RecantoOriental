@@ -48,14 +48,45 @@ export async function createProduct(formData: FormData) {
   const price = parseFloat((formData.get('price') as string).replace(',','.'))
   const category_id = formData.get('category_id') as string
 
-  // Temporarily ignoring image uploads for simplicity
+  // Image Upload Handling
+  const imageFile = formData.get('image') as File | null
+  let image_url: string | undefined = undefined
+
+  if (imageFile && imageFile.size > 0) {
+    // Generate a unique file name
+    const fileExt = imageFile.name.split('.').pop()
+    const fileName = `new-${Date.now()}.${fileExt}`
+    const filePath = `products/${fileName}`
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, imageFile, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError)
+      redirect('/admin/products?error=Erro ao fazer upload da imagem. Verifique o bucket product-images.')
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath)
+      
+    image_url = publicUrlData.publicUrl
+  }
+
   const { error } = await supabase
     .from('products')
     .insert([{ 
       name, 
       description, 
       price, 
-      category_id: category_id === '' ? null : category_id 
+      category_id: category_id === '' ? null : category_id,
+      image_url
     }])
 
   if (error) {
@@ -94,4 +125,27 @@ export async function deleteProduct(id: string) {
 
   revalidatePath('/admin/products')
   redirect('/admin/products?success=Produto excluído')
+}
+
+// --- ORDERS ACTIONS ---
+export async function updateOrderStatus(orderId: string, newStatus: string) {
+  const supabase = createAdminClient()
+
+  // Verify auth for safety even though we are using admin client
+  const client = await createClient()
+  const { data: { user } } = await client.auth.getUser()
+  if (!user) return { error: 'Unauthorized.' }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) {
+    console.error('Error updating order:', JSON.stringify(error, null, 2))
+    return { error: `Falha ao atualizar: ${error.message || 'Erro desconhecido'}` }
+  }
+
+  revalidatePath('/admin/pedidos')
+  return { success: true }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { ChevronLeft, CheckCircle2, Package, Truck, Clock, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { getWhatsAppUrl } from '@/utils/whatsapp'
 
 interface OrderTrackingProps {
   initialOrder: any;
@@ -13,7 +14,7 @@ interface OrderTrackingProps {
 const statusMap: Record<string, { label: string; icon: any; color: string; step: number }> = {
   'pending': { label: 'Aguardando Confirmação', icon: Clock, color: 'text-orange-500', step: 1 },
   'preparing': { label: 'Em Preparo', icon: Package, color: 'text-blue-500', step: 2 },
-  'delivering': { label: 'Saiu para Entrega', icon: Truck, color: 'text-purple-500', step: 3 },
+  'out_for_delivery': { label: 'Saiu para Entrega', icon: Truck, color: 'text-purple-500', step: 3 },
   'delivered': { label: 'Entregue', icon: CheckCircle2, color: 'text-green-500', step: 4 },
   'cancelled': { label: 'Cancelado', icon: AlertCircle, color: 'text-red-500', step: 0 },
 }
@@ -160,9 +161,15 @@ export default function OrderTrackingClient({ initialOrder, orderId }: OrderTrac
           
           <div className="space-y-3 mb-4">
             {order.order_items?.map((item: any) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-stone-600">{item.quantity}x {item.products?.name || 'Item'}</span>
-                <span className="font-medium text-stone-800">{formatPrice(item.unit_price * item.quantity)}</span>
+              <div key={item.id} className="flex flex-col text-sm border-b border-stone-100 pb-2 last:border-0 last:pb-0">
+                <div className="flex justify-between">
+                  <span className="text-stone-600 font-medium">{item.quantity}x {item.products?.name || 'Item'}</span>
+                  <span className="font-medium text-stone-800">{formatPrice(item.unit_price * item.quantity)}</span>
+                </div>
+                {item.extras?.map((extra: any, eIdx: number) => (
+                  <span key={eIdx} className="text-stone-400 text-xs pl-4">+ {extra.quantity}x {extra.name}</span>
+                ))}
+                {item.comment && <span className="text-stone-400 text-xs italic pl-4">Obs: {item.comment}</span>}
               </div>
             ))}
           </div>
@@ -183,6 +190,24 @@ export default function OrderTrackingClient({ initialOrder, orderId }: OrderTrac
             <span className="font-black text-xl text-primary">{formatPrice(order.total_amount)}</span>
           </div>
         </section>
+
+        {/* WhatsApp Share Button */}
+        <div className="pt-2 pb-6">
+          <a
+            href={getWhatsAppUrl(order)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3.5 px-4 rounded-xl shadow-sm transition"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+            </svg>
+            Enviar Pedido pelo WhatsApp
+          </a>
+          <p className="text-center text-xs text-stone-500 mt-3 px-4">
+            Envie este resumo para o nosso WhatsApp para agilizar o atendimento ou tirar dúvidas!
+          </p>
+        </div>
 
       </main>
     </>

@@ -79,6 +79,38 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Products are viewable by everyone." ON products FOR SELECT USING (true);
 
 
+-- 4.5 Product Complements
+CREATE TABLE product_complement_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  min_selections INTEGER DEFAULT 0,
+  max_selections INTEGER DEFAULT 1,
+  is_required BOOLEAN DEFAULT false,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+);
+
+ALTER TABLE product_complement_categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Complement categories are viewable by everyone." ON product_complement_categories FOR SELECT USING (true);
+
+CREATE TABLE product_complements (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  category_id UUID REFERENCES product_complement_categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) DEFAULT 0,
+  image_url TEXT,
+  is_available BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
+);
+
+ALTER TABLE product_complements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Complements are viewable by everyone." ON product_complements FOR SELECT USING (true);
+
+
 -- 5. Orders Table
 CREATE TYPE order_status AS ENUM ('pending', 'accepted', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled');
 CREATE TYPE payment_method AS ENUM ('online_stripe', 'cash', 'card_machine');
@@ -119,7 +151,9 @@ CREATE TABLE order_items (
   product_id UUID REFERENCES products(id) ON DELETE RESTRICT NOT NULL,
   quantity INTEGER NOT NULL,
   unit_price DECIMAL(10,2) NOT NULL,
-  total_price DECIMAL(10,2) NOT NULL
+  total_price DECIMAL(10,2) NOT NULL,
+  extras JSONB,
+  comment TEXT
 );
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;

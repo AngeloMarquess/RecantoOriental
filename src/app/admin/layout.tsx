@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Package, Tags, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, Tags, LogOut, ShoppingBag } from 'lucide-react'
 import { logout } from '../auth/actions'
 
 export default async function AdminLayout({
@@ -44,6 +44,9 @@ export default async function AdminLayout({
           <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-stone-300 hover:text-white hover:bg-stone-800 rounded-lg transition">
             <LayoutDashboard size={18} /> Resumo
           </Link>
+          <Link href="/admin/pedidos" className="flex items-center gap-3 px-3 py-2 text-primary font-bold hover:text-white hover:bg-stone-800 rounded-lg transition">
+            <ShoppingBag size={18} /> Pedidos
+          </Link>
           <Link href="/admin/categories" className="flex items-center gap-3 px-3 py-2 text-stone-300 hover:text-white hover:bg-stone-800 rounded-lg transition">
             <Tags size={18} /> Categorias
           </Link>
@@ -67,6 +70,7 @@ export default async function AdminLayout({
         <header className="md:hidden bg-stone-900 p-4 text-white flex justify-between items-center">
             <span className="font-bold text-primary">Admin Recanto</span>
             <div className="flex gap-4 text-sm">
+                <Link href="/admin/pedidos" className="text-primary font-bold">Pedidos</Link>
                 <Link href="/admin/categories">Cat</Link>
                 <Link href="/admin/products">Prod</Link>
             </div>
