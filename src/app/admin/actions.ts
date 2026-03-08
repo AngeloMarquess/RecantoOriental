@@ -13,9 +13,37 @@ export async function createCategory(formData: FormData) {
   const description = formData.get('description') as string
   const sort_order = parseInt((formData.get('sort_order') as string) || '0')
 
+  // Image Upload Handling
+  const imageFile = formData.get('image') as File | null
+  let image_url: string | undefined = undefined
+
+  if (imageFile && imageFile.size > 0) {
+    const fileExt = imageFile.name.split('.').pop()
+    const fileName = `cat-${Date.now()}.${fileExt}`
+    const filePath = `categories/${fileName}`
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('category-images')
+      .upload(filePath, imageFile, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Error uploading category image:', uploadError)
+      redirect('/admin/categories?error=Erro ao fazer upload da imagem. Verifique o bucket category-images.')
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('category-images')
+      .getPublicUrl(filePath)
+      
+    image_url = publicUrlData.publicUrl
+  }
+
   const { error } = await supabase
     .from('categories')
-    .insert([{ name, description, sort_order }])
+    .insert([{ name, description, sort_order, image_url }])
 
   if (error) {
     console.error('Error creating category:', error)
@@ -23,7 +51,60 @@ export async function createCategory(formData: FormData) {
   }
 
   revalidatePath('/admin/categories')
+  revalidatePath('/')
   redirect('/admin/categories?success=Categoria adicionada')
+}
+
+export async function updateCategory(id: string, formData: FormData) {
+  const supabase = createAdminClient()
+  
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const sort_orderStr = formData.get('sort_order') as string
+  const sort_order = parseInt(sort_orderStr || '0')
+
+  // Image Upload Handling
+  const imageFile = formData.get('image') as File | null
+  
+  const updatePayload: any = { name, description, sort_order }
+
+  if (imageFile && imageFile.size > 0) {
+    const fileExt = imageFile.name.split('.').pop()
+    const fileName = `cat-update-${Date.now()}.${fileExt}`
+    const filePath = `categories/${fileName}`
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('category-images')
+      .upload(filePath, imageFile, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (uploadError) {
+      console.error('Error uploading category image:', uploadError)
+      return { error: 'Erro ao fazer upload da imagem.' }
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('category-images')
+      .getPublicUrl(filePath)
+      
+    updatePayload.image_url = publicUrlData.publicUrl
+  }
+
+  const { error } = await supabase
+    .from('categories')
+    .update(updatePayload)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating category:', error)
+    return { error: 'Erro ao atualizar categoria.' }
+  }
+
+  revalidatePath('/admin/categories')
+  revalidatePath('/')
+  return { success: true }
 }
 
 export async function deleteCategory(id: string) {
@@ -47,6 +128,13 @@ export async function createProduct(formData: FormData) {
   const description = formData.get('description') as string
   const price = parseFloat((formData.get('price') as string).replace(',','.'))
   const category_id = formData.get('category_id') as string
+
+  // New fields
+  const originalPriceStr = formData.get('original_price') as string
+  const original_price = originalPriceStr ? parseFloat(originalPriceStr.replace(',','.')) : null
+  
+  const servesStr = formData.get('serves') as string
+  const serves = servesStr ? parseInt(servesStr) : null
 
   // Image Upload Handling
   const imageFile = formData.get('image') as File | null
@@ -85,6 +173,8 @@ export async function createProduct(formData: FormData) {
       name, 
       description, 
       price, 
+      original_price,
+      serves,
       category_id: category_id === '' ? null : category_id,
       image_url
     }])
@@ -148,4 +238,32 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
 
   revalidatePath('/admin/pedidos')
   return { success: true }
+}
+
+// --- STORE SETTINGS ACTIONS ---
+export async function updateStoreSettings(formData: FormData) {
+  const supabase = createAdminClient()
+  
+  const is_open = formData.get('is_open') === 'true'
+  const opening_time = formData.get('opening_time') as string || null
+  const closing_time = formData.get('closing_time') as string || null
+
+  const { error } = await supabase
+    .from('store_settings')
+    .upsert({ 
+      id: 1, 
+      is_open, 
+      opening_time, 
+      closing_time 
+    })
+
+  if (error) {
+    console.error('Error updating store settings:', error)
+    redirect('/admin/settings?error=' + encodeURIComponent('Falha ao atualizar configurações da loja: ' + error.message))
+  }
+
+  revalidatePath('/admin/settings')
+  revalidatePath('/')
+  revalidatePath('/checkout')
+  redirect('/admin/settings?success=Configurações salvas com sucesso!')
 }

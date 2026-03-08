@@ -70,6 +70,8 @@ CREATE TABLE products (
   name TEXT NOT NULL,
   description TEXT,
   price DECIMAL(10,2) NOT NULL,
+  original_price DECIMAL(10,2),
+  serves INTEGER,
   image_url TEXT,
   is_available BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
@@ -172,4 +174,17 @@ BEGIN;
   DROP PUBLICATION IF EXISTS supabase_realtime;
   CREATE PUBLICATION supabase_realtime;
 COMMIT;
+
+-- 7. Store Settings Table
+CREATE TABLE store_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  is_open BOOLEAN DEFAULT true,
+  opening_time TIME,
+  closing_time TIME,
+  CHECK (id = 1)
+);
+
+ALTER TABLE store_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Store settings are viewable by everyone." ON store_settings FOR SELECT USING (true);
+
 ALTER PUBLICATION supabase_realtime ADD TABLE orders;

@@ -21,10 +21,10 @@ type OrderPayload = {
 
 export async function createOrder(payload: OrderPayload) {
   const supabase = await createClient()
-  
+
   // 1. Check if user is logged in
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
+
   if (authError || !user) {
     return { error: 'Você precisa estar logado para finalizar o pedido.' }
   }
@@ -42,8 +42,8 @@ export async function createOrder(payload: OrderPayload) {
         status: 'pending',
         total_amount: payload.totalAmount,
         delivery_address: `${payload.address}${payload.reference ? ' - ' + payload.reference : ''}`,
-        payment_method: payload.paymentMethod === 'dinheiro' ? 'cash' : 
-                        payload.paymentMethod === 'online' ? 'online_stripe' : 'card_machine'
+        payment_method: payload.paymentMethod === 'dinheiro' ? 'cash' :
+          payload.paymentMethod === 'online' ? 'online_stripe' : 'card_machine'
       })
       .select()
       .single()

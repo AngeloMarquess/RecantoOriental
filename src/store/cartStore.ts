@@ -31,6 +31,8 @@ interface CartState {
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getItemPrice: (item: CartItem) => number;
+  deliveryMode: 'delivery' | 'pickup';
+  setDeliveryMode: (mode: 'delivery' | 'pickup') => void;
 }
 
 // Function to generate a unique ID based on product, extras, and comment
@@ -50,9 +52,11 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isCartOpen: false,
+      deliveryMode: 'delivery',
 
       openCart: () => set({ isCartOpen: true }),
       closeCart: () => set({ isCartOpen: false }),
+      setDeliveryMode: (mode) => set({ deliveryMode: mode }),
       
       addItem: (newItemInput) => set((state) => {
         const cartItemId = generateCartItemId(newItemInput);
@@ -102,7 +106,7 @@ export const useCartStore = create<CartState>()(
       }
     }),
     {
-      name: 'recanto-cart-storage-v2', // bumped storage name due to schema change so it doesn't crash existing users
+      name: 'recanto-cart-storage-v3', // bumped storage name due to schema change so it doesn't crash existing users
     }
   )
 )

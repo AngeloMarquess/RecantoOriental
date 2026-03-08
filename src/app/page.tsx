@@ -2,7 +2,10 @@ import { ChevronRight, MapPin, Search, Star, Clock, Utensils, UserCircle, LogOut
 import Link from "next/link";
 import CartButton from "@/components/CartButton";
 import ProductDetailModal from "@/components/ProductDetailModal";
+import SearchAndDeliveryBar from "@/components/SearchAndDeliveryBar";
+import StoreClosedBanner from "@/components/StoreClosedBanner";
 import { createClient } from "@/utils/supabase/server";
+import { getStoreStatus } from "@/utils/storeStatus";
 import { logout } from "./auth/actions";
 
 export default async function Home({
@@ -18,11 +21,23 @@ export default async function Home({
   
   // Fetch real categories and products
   const { data: categories } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
-  const { data: products } = await supabase.from('products').select('*').eq('is_available', true).order('created_at', { ascending: false }).limit(20);
+  
+  // Base query for products
+  let productsQuery = supabase.from('products').select('*').eq('is_available', true);
+  
+  // Apply search filter if query exists
+  const searchQuery = resolvedSearchParams?.q as string | undefined;
+  if (searchQuery) {
+    productsQuery = productsQuery.ilike('name', `%${searchQuery}%`);
+  }
+  
+  const { data: products } = await productsQuery.order('created_at', { ascending: false }).limit(20);
 
   // Get user's first name from metadata
   const fullName = user?.user_metadata?.full_name || "";
   const firstName = fullName.split(" ")[0];
+
+  const storeStatus = await getStoreStatus();
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
@@ -72,6 +87,17 @@ export default async function Home({
         </div>
       </div>
 
+      {!storeStatus.isOpen && (
+         <div className="max-w-md mx-auto mb-4 px-4 hidden md:block">
+           <StoreClosedBanner />
+         </div>
+      )}
+      {!storeStatus.isOpen && (
+         <div className="md:hidden block mb-4">
+           <StoreClosedBanner />
+         </div>
+      )}
+
       <main className="max-w-md mx-auto px-4 space-y-8">
         {/* Success Alert */}
         {success && (
@@ -80,16 +106,8 @@ export default async function Home({
           </div>
         )}
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
-          <input 
-            type="text" 
-            placeholder="O que vamos pedir hoje?" 
-            className="w-full bg-white border border-stone-200 text-stone-800 rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-            suppressHydrationWarning
-          />
-        </div>
+        {/* Search and Delivery Area */}
+        <SearchAndDeliveryBar />
 
         {/* Hero Banner Promo */}
         <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-stone-900 text-white shadow-xl shadow-stone-200">
@@ -143,13 +161,18 @@ export default async function Home({
             ) : (
               categories?.map((cat, i) => (
                 <div key={cat.id || i} className="flex flex-col items-center gap-2 min-w-[72px]">
-                  <button className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl shadow-sm transition-transform active:scale-95 bg-white text-primary border border-stone-200 hover:border-primary/50 hover:bg-red-50`} suppressHydrationWarning>
-                    {/* Placeholder for real images. We use an emoji map or default icon for now. */}
-                    {cat.name.toLowerCase().includes('temaki') ? '🍙' : 
-                     cat.name.toLowerCase().includes('yakisoba') ? '🍜' : 
-                     cat.name.toLowerCase().includes('combinado') ? '🍣' : 
-                     cat.name.toLowerCase().includes('entrada') ? '🥟' : 
-                     cat.name.toLowerCase().includes('bebida') ? '🥤' : '🥢'}
+                  <button className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl shadow-sm transition-transform active:scale-95 bg-white text-primary border border-stone-200 hover:border-primary/50 hover:bg-red-50 overflow-hidden relative`} suppressHydrationWarning>
+                    {cat.image_url ? (
+                      <img src={cat.image_url} alt={cat.name} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-3xl">
+                        {cat.name.toLowerCase().includes('temaki') ? '🍙' : 
+                         cat.name.toLowerCase().includes('yakisoba') ? '🍜' : 
+                         cat.name.toLowerCase().includes('combinado') ? '🍣' : 
+                         cat.name.toLowerCase().includes('entrada') ? '🥟' : 
+                         cat.name.toLowerCase().includes('bebida') ? '🥤' : '🥢'}
+                      </span>
+                    )}
                   </button>
                   <span className={`text-xs font-medium text-stone-700 text-center truncate w-full`}>{cat.name}</span>
                 </div>

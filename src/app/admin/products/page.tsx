@@ -52,8 +52,8 @@ export default async function ProductsPage({
             Você precisa cadastrar pelo menos uma Categoria antes de adicionar produtos.
           </div>
         ) : (
-          <form action={createProduct} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="md:col-span-1">
+          <form action={createProduct} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+            <div className="md:col-span-2">
               <label className="block text-xs font-medium text-stone-500 mb-1">Categoria</label>
               <select name="category_id" required className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" suppressHydrationWarning>
                 <option value="">Selecione...</option>
@@ -62,26 +62,34 @@ export default async function ProductsPage({
                 ))}
               </select>
             </div>
-            <div className="md:col-span-1">
+            <div className="md:col-span-2">
               <label className="block text-xs font-medium text-stone-500 mb-1">Nome do Item</label>
               <input name="name" type="text" required className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" suppressHydrationWarning />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-stone-500 mb-1">Preço (R$)</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Preço Atual</label>
               <input name="price" type="number" step="0.01" required placeholder="0.00" className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" suppressHydrationWarning />
             </div>
-            <div className="md:col-span-1 pt-5">
-              <button type="submit" className="w-full bg-primary text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition" suppressHydrationWarning>
-                Adicionar
-              </button>
+            <div className="md:col-span-1">
+              <label className="block text-xs font-medium text-stone-500 mb-1" title="Para mostrar desconto. Opcional.">Preço Antigo</label>
+              <input name="original_price" type="number" step="0.01" placeholder="0.00" className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" suppressHydrationWarning />
             </div>
             <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-stone-500 mb-1" title="Quantas pessoas servem. Opcional.">Serve (Qtd Pessoas)</label>
+              <input name="serves" type="number" step="1" min="1" placeholder="Ex: 2" className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" suppressHydrationWarning />
+            </div>
+            <div className="md:col-span-4">
               <label className="block text-xs font-medium text-stone-500 mb-1">Descrição</label>
               <input name="description" type="text" className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm bg-stone-50 text-stone-900 focus:ring-primary focus:border-primary" placeholder="Detalhes do prato" suppressHydrationWarning />
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-4">
               <label className="block text-xs font-medium text-stone-500 mb-1">Foto do Produto (Opcional)</label>
               <input name="image" type="file" accept="image/*" className="w-full text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer bg-white border border-stone-300 rounded-lg focus:ring-primary focus:border-primary" suppressHydrationWarning />
+            </div>
+            <div className="md:col-span-2 pt-5">
+              <button type="submit" className="w-full bg-primary text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-red-700 transition" suppressHydrationWarning>
+                Adicionar Produto
+              </button>
             </div>
           </form>
         )}

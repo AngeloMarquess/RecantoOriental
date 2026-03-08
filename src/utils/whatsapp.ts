@@ -6,13 +6,13 @@ export function generateWhatsAppMessage(order: any): string {
   const orderId = order.id.split('-')[0].toUpperCase()
   const customerName = order.profiles?.full_name || 'Cliente'
   const deliveryAddress = order.delivery_address || 'Endereço não informado'
-  const paymentMethod = order.payment_method === 'cash' ? 'Dinheiro' : 
-                        order.payment_method === 'card_machine' ? 'Maquininha' : 
-                        order.payment_method === 'online_stripe' ? 'Online' : order.payment_method
+  const paymentMethod = order.payment_method === 'cash' ? 'Dinheiro' :
+    order.payment_method === 'card_machine' ? 'Maquininha' :
+      order.payment_method === 'online_stripe' ? 'Online' : order.payment_method
 
   let message = `*NOVO PEDIDO: #${orderId}*\n`
   message += `Olá! Gostaria de confirmar o meu pedido.\n\n`
-  
+
   message += `*Cliente:* ${customerName}\n`
   if (order.profiles?.phone_number) {
     message += `*Telefone:* ${order.profiles.phone_number}\n`
@@ -29,7 +29,7 @@ export function generateWhatsAppMessage(order: any): string {
   }
 
   message += `\n*Forma de Pagamento:* ${paymentMethod}`
-  
+
   if (order.delivery_fee > 0) {
     const feeInfo = `R$ ${Number(order.delivery_fee).toFixed(2).replace('.', ',')}`
     message += `\n*Taxa de Entrega:* ${feeInfo}`

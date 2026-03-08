@@ -11,17 +11,29 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const { items, getTotalPrice, getItemPrice, clearCart } = useCartStore()
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const isNavigating = useRef(false)
-  
+
+  const [storeClosedReason, setStoreClosedReason] = useState<string | undefined>()
+
   useEffect(() => {
     setMounted(true)
     // If cart is empty on mount, send them back to home
     if (items.length === 0 && !isNavigating.current) {
       router.push('/')
     }
+
+    // Check store status before allowing checkout
+    fetch('/api/store/status', { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.isOpen) {
+          setStoreClosedReason(data.reason || 'manual')
+        }
+      })
+      .catch(console.error)
   }, [items.length, router])
 
   if (!mounted || (items.length === 0 && !isNavigating.current)) {
@@ -35,7 +47,7 @@ export default function CheckoutPage() {
     const address = formData.get('address') as string
     const reference = formData.get('reference') as string
     const paymentMethod = formData.get('payment_method') as string
-    
+
     // Simplistic validation
     if (!address || !paymentMethod) {
       setError('Por favor, preencha o endereço e escolha a forma de pagamento.')
@@ -48,11 +60,11 @@ export default function CheckoutPage() {
         address,
         reference,
         paymentMethod,
-        items: items.map(item => ({ 
+        items: items.map(item => ({
           cartItemId: item.cartItemId,
-          id: item.id, 
+          id: item.id,
           name: item.name,
-          quantity: item.quantity, 
+          quantity: item.quantity,
           price: getItemPrice(item) / item.quantity,
           extras: item.extras,
           comment: item.comment
@@ -65,7 +77,7 @@ export default function CheckoutPage() {
         setIsSubmitting(false)
       } else {
         isNavigating.current = true
-        
+
         // If payment method is online, redirect to Stripe
         if (paymentMethod === 'online') {
           try {
@@ -78,9 +90,9 @@ export default function CheckoutPage() {
                 // Optional email could go here
               })
             });
-            
+
             const data = await stripeRes.json()
-            
+
             if (data.url) {
               window.location.href = data.url
               return // Leave page
@@ -89,7 +101,7 @@ export default function CheckoutPage() {
             }
           } catch (stripeErr) {
             console.error(stripeErr)
-            setError('Pedido criado, mas falha ao abrir o pagamento online. Você poderá pagar na entrega.')
+            setError('Pedido criado, mas falha ao abrir o pagamento online (Stripe). Você poderá pagar na entrega.')
             setIsSubmitting(false)
             // Fallback: Clear cart and go to tracking anyway since order is created
             setTimeout(() => {
@@ -135,110 +147,121 @@ export default function CheckoutPage() {
         )}
 
         <form action={handleCheckout} className="space-y-6">
+          {storeClosedReason && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-medium border border-red-100 flex items-center justify-center text-center">
+              Desculpe, a loja está fechada no momento. <br />Não é possível realizar novos pedidos.
+            </div>
+          )}
+
           {/* Section: Delivery Details */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
-            <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
-              <MapPin className="text-primary" size={20} />
-              Entrega
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Endereço Completo *</label>
-                <input 
-                  type="text" 
-                  name="address"
-                  required
-                  placeholder="Rua, Número, Bairro"
-                  className="w-full px-4 py-3 border border-stone-200 rounded-xl bg-stone-50 text-stone-800 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition outline-none"
-                  suppressHydrationWarning
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Complemento / Ponto de Referência</label>
-                <input 
-                  type="text" 
-                  name="reference"
-                  placeholder="Apto 101, Perto da padaria..."
-                  className="w-full px-4 py-3 border border-stone-200 rounded-xl bg-stone-50 text-stone-800 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition outline-none"
-                  suppressHydrationWarning
-                />
-              </div>
-            </div>
-          </section>
+          {!storeClosedReason && (
+            <>
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
+                <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
+                  <MapPin className="text-primary" size={20} />
+                  Entrega
+                </h2>
 
-          {/* Section: Payment Method */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
-            <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
-              <CreditCard className="text-primary" size={20} />
-              Pagamento na Entrega
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <label className="relative cursor-pointer">
-                <input type="radio" name="payment_method" value="dinheiro" className="peer sr-only" required suppressHydrationWarning />
-                <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
-                  <Banknote className="text-stone-500 peer-checked:text-primary" size={24} />
-                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm">Dinheiro</span>
-                </div>
-              </label>
-
-              <label className="relative cursor-pointer">
-                <input type="radio" name="payment_method" value="cartao_maquineta" className="peer sr-only" suppressHydrationWarning />
-                <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
-                  <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
-                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">No Cartão (Presencial)</span>
-                </div>
-              </label>
-
-              <label className="relative cursor-pointer">
-                <input type="radio" name="payment_method" value="online" className="peer sr-only" suppressHydrationWarning />
-                <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
-                  <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
-                  <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">Pagar Agora (Online)</span>
-                </div>
-              </label>
-            </div>
-          </section>
-
-          {/* Section: Order Summary */}
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
-            <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
-              <ShoppingBag className="text-primary" size={20} />
-              Resumo
-            </h2>
-            
-            <div className="space-y-3 mb-4">
-              {items.map(item => (
-                <div key={item.cartItemId} className="flex flex-col text-sm border-b border-stone-50 pb-2 last:border-0 last:pb-0">
-                  <div className="flex justify-between">
-                    <span className="text-stone-600 font-medium">{item.quantity}x {item.name}</span>
-                    <span className="font-medium text-stone-800">{formatPrice(getItemPrice(item))}</span>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Endereço Completo *</label>
+                    <input
+                      type="text"
+                      name="address"
+                      required
+                      placeholder="Rua, Número, Bairro"
+                      className="w-full px-4 py-3 border border-stone-200 rounded-xl bg-stone-50 text-stone-800 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition outline-none"
+                      suppressHydrationWarning
+                    />
                   </div>
-                  {item.extras?.map(extra => (
-                    <span key={extra.id} className="text-stone-400 text-xs pl-4">+ {extra.quantity}x {extra.name}</span>
-                  ))}
-                  {item.comment && <span className="text-stone-400 text-xs italic pl-4">Obs: {item.comment}</span>}
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Complemento / Ponto de Referência</label>
+                    <input
+                      type="text"
+                      name="reference"
+                      placeholder="Apto 101, Perto da padaria..."
+                      className="w-full px-4 py-3 border border-stone-200 rounded-xl bg-stone-50 text-stone-800 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition outline-none"
+                      suppressHydrationWarning
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
-            
-            <div className="border-t border-dashed border-stone-200 pt-4 flex justify-between items-center">
-              <span className="font-medium text-stone-600">Total</span>
-              <span className="font-black text-xl text-primary">{formatPrice(getTotalPrice())}</span>
-            </div>
-          </section>
+              </section>
 
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-[0.98] transition shadow-lg shadow-red-500/30 disabled:opacity-70 disabled:cursor-not-allowed"
-            suppressHydrationWarning
-          >
-            {isSubmitting ? 'Processando...' : 'Confirmar Pedido'}
-          </button>
+              {/* Section: Payment Method */}
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
+                <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
+                  <CreditCard className="text-primary" size={20} />
+                  Pagamento na Entrega
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="relative cursor-pointer">
+                    <input type="radio" name="payment_method" value="dinheiro" className="peer sr-only" required suppressHydrationWarning />
+                    <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
+                      <Banknote className="text-stone-500 peer-checked:text-primary" size={24} />
+                      <span className="font-medium text-stone-700 peer-checked:text-primary text-sm">Dinheiro</span>
+                    </div>
+                  </label>
+
+                  <label className="relative cursor-pointer">
+                    <input type="radio" name="payment_method" value="cartao_maquineta" className="peer sr-only" suppressHydrationWarning />
+                    <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
+                      <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
+                      <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">No Cartão (Presencial)</span>
+                    </div>
+                  </label>
+
+                  <label className="relative cursor-pointer">
+                    <input type="radio" name="payment_method" value="online" className="peer sr-only" suppressHydrationWarning />
+                    <div className="p-4 rounded-xl border-2 border-stone-100 peer-checked:border-primary peer-checked:bg-red-50 transition flex flex-col items-center gap-2">
+                      <CreditCard className="text-stone-500 peer-checked:text-primary" size={24} />
+                      <span className="font-medium text-stone-700 peer-checked:text-primary text-sm text-center">Pagar Agora (Online)</span>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              {/* Section: Order Summary */}
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100">
+                <h2 className="font-bold text-lg text-stone-800 mb-4 flex items-center gap-2">
+                  <ShoppingBag className="text-primary" size={20} />
+                  Resumo
+                </h2>
+
+                <div className="space-y-3 mb-4">
+                  {items.map(item => (
+                    <div key={item.cartItemId} className="flex flex-col text-sm border-b border-stone-50 pb-2 last:border-0 last:pb-0">
+                      <div className="flex justify-between">
+                        <span className="text-stone-600 font-medium">{item.quantity}x {item.name}</span>
+                        <span className="font-medium text-stone-800">{formatPrice(getItemPrice(item))}</span>
+                      </div>
+                      {item.extras?.map(extra => (
+                        <span key={extra.id} className="text-stone-400 text-xs pl-4">+ {extra.quantity}x {extra.name}</span>
+                      ))}
+                      {item.comment && <span className="text-stone-400 text-xs italic pl-4">Obs: {item.comment}</span>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-dashed border-stone-200 pt-4 flex justify-between items-center">
+                  <span className="font-medium text-stone-600">Total</span>
+                  <span className="font-black text-xl text-primary">{formatPrice(getTotalPrice())}</span>
+                </div>
+              </section>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || storeClosedReason !== undefined}
+                className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-red-700 active:scale-[0.98] transition shadow-lg shadow-red-500/30 disabled:opacity-70 disabled:cursor-not-allowed"
+                suppressHydrationWarning
+              >
+                {isSubmitting ? 'Processando...' : storeClosedReason ? 'Loja Fechada' : 'Confirmar Pedido'}
+              </button>
+            </>
+          )}
         </form>
       </main>
     </div>
   )
 }
+

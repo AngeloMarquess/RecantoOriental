@@ -51,16 +51,16 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
           console.log('Realtime Order Event:', payload)
-          
+
           if (payload.eventType === 'INSERT') {
             // A completely new order arrived. We lack the JOIN data (profiles, items) in the simple payload.
             // Let's refetch this specific order to get the full shape, then prepend it.
             fetchFullOrder(payload.new.id)
-          } 
+          }
           else if (payload.eventType === 'UPDATE') {
             // Update the specific order in our state array.
-            setOrders(currentOrders => 
-              currentOrders.map(o => 
+            setOrders(currentOrders =>
+              currentOrders.map(o =>
                 o.id === payload.new.id ? { ...o, ...payload.new } : o
               )
             )
@@ -91,15 +91,15 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
     // Define the forward flow
     const flow = ['pending', 'preparing', 'out_for_delivery', 'delivered']
     const currentIndex = flow.indexOf(currentStatus)
-    
+
     if (currentIndex === -1 || currentIndex === flow.length - 1) return // Already delivered or cancelled
-    
+
     const nextStatus = flow[currentIndex + 1]
-    
+
     setLoadingOrderId(orderId)
     const result = await updateOrderStatus(orderId, nextStatus)
     setLoadingOrderId(null)
-    
+
     if (result.error) {
       alert('Erro ao atualizar status: ' + result.error)
     }
@@ -108,24 +108,24 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
   }
 
   const handleCancelOrder = async (orderId: string) => {
-    if(!confirm('Tem certeza que deseja cancelar este pedido?')) return;
-    
+    if (!confirm('Tem certeza que deseja cancelar este pedido?')) return;
+
     setLoadingOrderId(orderId)
     await updateOrderStatus(orderId, 'cancelled')
     setLoadingOrderId(null)
   }
 
   const formatPrice = (price: number) => `R$ ${Number(price).toFixed(2).replace('.', ',')}`
-  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute:'2-digit' })
+  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 items-start min-h-[70vh] snap-x">
       {statusColumns.map((col) => {
         const columnOrders = orders.filter(o => o.status === col.id)
-        
+
         return (
           <div key={col.id} className={`flex-shrink-0 w-80 md:w-96 rounded-2xl border ${col.border} bg-white shadow-sm flex flex-col max-h-[85vh] snap-center`}>
-            
+
             {/* Column Header */}
             <div className={`p-4 rounded-t-2xl border-b ${col.border} ${col.bg} flex items-center justify-between`}>
               <div className="flex items-center gap-2">
@@ -144,14 +144,14 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
               ) : (
                 columnOrders.map(order => (
                   <div key={order.id} className="bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:shadow-md transition">
-                    
+
                     {/* Card Header (ID + Time) */}
                     <div className="flex justify-between items-start mb-3">
                       <span className="font-mono text-xs font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded">
                         #{order.id.split('-')[0].toUpperCase()}
                       </span>
                       <span className="text-xs font-medium text-stone-400 flex items-center gap-1">
-                        <Clock size={12}/> {formatTime(order.created_at)}
+                        <Clock size={12} /> {formatTime(order.created_at)}
                       </span>
                     </div>
 
@@ -176,7 +176,7 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
                         {order.order_items?.map((item, idx) => (
                           <li key={idx} className="text-xs text-stone-700 flex flex-col border-b border-stone-100 last:border-0 pb-1.5 last:pb-0">
                             <span className="truncate pr-2"><span className="font-bold">{item.quantity}x</span> {item.products?.name}</span>
-                            
+
                             {item.extras && item.extras.length > 0 && (
                               <div className="pl-4 mt-1 space-y-0.5 text-stone-500 text-[11px]">
                                 {item.extras.map((extra, eIdx) => (
@@ -184,7 +184,7 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
                                 ))}
                               </div>
                             )}
-                            
+
                             {item.comment && (
                               <div className="pl-4 mt-0.5 italic text-stone-500 text-[11px] font-medium text-orange-600/80">
                                 Obs: {item.comment}
@@ -196,17 +196,16 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
                       <div className="mt-2 pt-2 border-t border-stone-200 flex justify-between items-center">
                         <div className="flex flex-col">
                           <span className="text-[10px] uppercase font-bold text-stone-500">
-                            {order.payment_method === 'cash' ? 'Dinheiro' : 
-                             order.payment_method === 'online_stripe' ? 'Online (Stripe)' : 'Cartão (Máquina)'}
+                            {order.payment_method === 'cash' ? 'Dinheiro' :
+                              order.payment_method === 'online_stripe' ? 'Online (Stripe)' : 'Cartão (Máquina)'}
                           </span>
                           {order.payment_method === 'online_stripe' && (
-                            <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded w-fit mt-0.5 ${
-                              order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 
-                              order.payment_status === 'failed' ? 'bg-red-100 text-red-700' : 
-                              'bg-orange-100 text-orange-700'
-                            }`}>
-                              {order.payment_status === 'paid' ? 'PAGO' : 
-                               order.payment_status === 'failed' ? 'FALHOU' : 'AGUARDANDO PIX/CARTÃO'}
+                            <span className={`text-[9px] uppercase font-black px-1.5 py-0.5 rounded w-fit mt-0.5 ${order.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
+                              order.payment_status === 'failed' ? 'bg-red-100 text-red-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                              {order.payment_status === 'paid' ? 'PAGO' :
+                                order.payment_status === 'failed' ? 'FALHOU' : 'AGUARDANDO PIX/CARTÃO'}
                             </span>
                           )}
                         </div>
@@ -218,28 +217,28 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
                     <div className="flex gap-2 mt-auto pt-1">
                       {/* Cancel Button - Only for early stages */}
                       {['pending', 'preparing'].includes(order.status) && (
-                         <button 
-                           onClick={() => handleCancelOrder(order.id)}
-                           disabled={loadingOrderId === order.id}
-                           className="flex-1 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50"
-                         >
-                           Cancelar
-                         </button>
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          disabled={loadingOrderId === order.id}
+                          className="flex-1 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
                       )}
 
                       {/* Advance Button - Only if there is a next step */}
                       {['pending', 'preparing', 'out_for_delivery'].includes(order.status) && (
-                        <button 
+                        <button
                           onClick={() => handleStatusChange(order.id, order.status)}
                           disabled={loadingOrderId === order.id}
                           className="flex-[2] py-2 px-2 text-xs font-bold text-white bg-stone-900 hover:bg-primary rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-1 shadow-sm"
                         >
-                          {loadingOrderId === order.id ? '...' : 
-                            order.status === 'pending' ? 'Preparar' : 
-                            order.status === 'preparing' ? 'Despachar' : 
-                            'Finalizar'
-                          } 
-                          <ChevronRight size={14}/>
+                          {loadingOrderId === order.id ? '...' :
+                            order.status === 'pending' ? 'Preparar' :
+                              order.status === 'preparing' ? 'Despachar' :
+                                'Finalizar'
+                          }
+                          <ChevronRight size={14} />
                         </button>
                       )}
                     </div>
