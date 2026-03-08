@@ -37,6 +37,25 @@ const statusColumns = [
   { id: 'cancelled', title: 'Cancelados', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
 ]
 
+// Use browser built-in Text-to-Speech to say "Pedido!"
+const playNotificationSound = () => {
+  try {
+    if (!('speechSynthesis' in window)) return;
+
+    // Create the utterance
+    const utterance = new SpeechSynthesisUtterance("Pedidooooo!");
+    utterance.lang = "pt-BR";
+    utterance.rate = 1.0; // Normal speed
+    utterance.pitch = 1.2; // Slightly higher/happier pitch
+    utterance.volume = 1.0;
+
+    // Play the voice
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error("Speech error:", error)
+  }
+}
+
 export default function OrdersDashboardClient({ initialOrders }: { initialOrders: any[] }) {
   const [orders, setOrders] = useState<Order[]>(initialOrders)
   const [loadingOrderId, setLoadingOrderId] = useState<string | null>(null)
@@ -82,7 +101,8 @@ export default function OrdersDashboardClient({ initialOrders }: { initialOrders
       .single()
 
     if (data && !error) {
-      // Play a sound (optional UX, skipped for now to avoid browser autoplay restrictions)
+      // Play a notification sound
+      playNotificationSound();
       setOrders(current => [data, ...current])
     }
   }

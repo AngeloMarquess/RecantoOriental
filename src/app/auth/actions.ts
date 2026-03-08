@@ -36,7 +36,7 @@ export async function signup(formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string
 
   if (password !== confirmPassword) {
-     redirect('/signup?error=As senhas não coincidem.')
+    redirect('/signup?error=As senhas não coincidem.')
   }
 
   const data = {
@@ -54,7 +54,8 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/signup?error=Erro ao criar conta. Tente novamente mais tarde.')
+    console.error('Signup error:', error.message)
+    redirect(`/signup?error=${encodeURIComponent(error.message)}`)
   }
 
   // Se precisar de confirmação de e-mail:
