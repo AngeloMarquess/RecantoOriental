@@ -210,16 +210,16 @@ export default async function Home({
                       serves: item.serves
                     }}
                   >
-                    <div className="bg-white p-3 rounded-xl shadow-sm border border-stone-100 flex gap-4 hover:shadow-md transition-shadow cursor-pointer text-left focus:outline-none overflow-hidden h-32">
-                      <div className="w-28 h-auto bg-stone-50 border border-stone-100 rounded-lg flex items-center justify-center text-4xl flex-shrink-0 relative overflow-hidden">
+                    <button className="bg-white p-3 rounded-xl shadow-sm border border-stone-100 flex gap-4 hover:shadow-md transition-shadow cursor-pointer text-left focus:outline-none overflow-hidden h-32 w-full" suppressHydrationWarning>
+                      <div className="w-28 h-auto bg-stone-50 border border-stone-100 rounded-lg flex items-center justify-center text-4xl flex-shrink-0 relative overflow-hidden" suppressHydrationWarning>
                         {item.image_url ? (
                           <img src={item.image_url} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
                           icon
                         )}
                       </div>
-                      <div className="flex flex-col flex-grow py-1 justify-between min-w-0">
-                        <div>
+                      <div className="flex flex-col flex-grow py-1 justify-between min-w-0" suppressHydrationWarning>
+                        <div suppressHydrationWarning>
                           <h4 className="font-bold text-stone-800 text-sm leading-tight mb-1 truncate">{item.name}</h4>
                           {item.description && (
                             <p className="text-xs text-stone-500 line-clamp-2 leading-snug">{item.description}</p>
@@ -231,7 +231,7 @@ export default async function Home({
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-2" suppressHydrationWarning>
                           {item.original_price && Number(item.original_price) > Number(item.price) && (
                             <span className="text-xs text-stone-400 line-through font-medium">
                               R$ {Number(item.original_price).toFixed(2).replace('.', ',')}
@@ -240,7 +240,7 @@ export default async function Home({
                           <span className="font-bold text-primary text-base">R$ {Number(item.price).toFixed(2).replace('.', ',')}</span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   </ProductDetailModal>
                 )
               })
