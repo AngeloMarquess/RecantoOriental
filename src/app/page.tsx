@@ -1,4 +1,4 @@
-import { ChevronRight, MapPin, Search, Star, Clock, Utensils, UserCircle, LogOut, ClipboardList } from "lucide-react";
+import { ChevronRight, MapPin, Search, Star, Clock, TicketPercent, UserCircle, LogOut, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import CartButton from "@/components/CartButton";
 import ProductDetailModal from "@/components/ProductDetailModal";
@@ -7,6 +7,8 @@ import StoreClosedBanner from "@/components/StoreClosedBanner";
 import { createClient } from "@/utils/supabase/server";
 import { getStoreStatus } from "@/utils/storeStatus";
 import { logout } from "./auth/actions";
+import UserProfileMenu from "@/components/profile/UserProfileMenu";
+import AddressHeaderButton from "@/components/address/AddressHeaderButton";
 
 export default async function Home({
   searchParams,
@@ -18,84 +20,79 @@ export default async function Home({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   // Fetch real categories and products
   const { data: categories } = await supabase.from('categories').select('*').order('sort_order', { ascending: true });
-  
+
   // Base query for products
   let productsQuery = supabase.from('products').select('*').eq('is_available', true);
-  
+
   // Apply search filter if query exists
   const searchQuery = resolvedSearchParams?.q as string | undefined;
   if (searchQuery) {
     productsQuery = productsQuery.ilike('name', `%${searchQuery}%`);
   }
-  
+
   const { data: products } = await productsQuery.order('created_at', { ascending: false }).limit(20);
 
-  // Get user's first name from metadata
-  const fullName = user?.user_metadata?.full_name || "";
-  const firstName = fullName.split(" ")[0];
+  let userProfile = null;
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    userProfile = data;
+  }
 
   const storeStatus = await getStoreStatus();
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
-      {/* Header / Navbar */}
+      {/* Header / Navbar (99 Food Style Layout, Brand Colors) */}
       <header className="sticky top-0 z-50 bg-primary shadow-lg text-white">
-        <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white p-1 rounded-full w-10 h-10 flex items-center justify-center text-primary">
-              <Utensils size={24} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight tracking-wide uppercase">Recanto Oriental</h1>
-              <p className="text-xs text-red-200 font-medium">Delivery Rápido</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium hidden sm:block">Olá, {firstName}</span>
-                <Link href="/pedidos" className="p-2 hover:bg-white/20 rounded-full transition" title="Meus Pedidos">
-                  <ClipboardList size={18} />
-                </Link>
-                <form action={logout}>
-                  <button type="submit" className="p-2 hover:bg-white/20 rounded-full transition" title="Sair" suppressHydrationWarning>
-                    <LogOut size={18} />
-                  </button>
-                </form>
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-3">
+
+          {/* Avatar Profile Trigger */}
+          {user ? (
+            <UserProfileMenu
+              userEmail={user.email}
+              profile={userProfile}
+            />
+          ) : (
+            <Link href="/login" className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-full border border-white/30 text-white shrink-0 hover:bg-white/30 transition">
+              <UserCircle size={32} />
+            </Link>
+          )}
+
+          {/* Location Selector */}
+          <AddressHeaderButton initialAddress="Rua José Braz Moscow, 978" />
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-4 shrink-0">
+            {/* Coupons */}
+            <button className="relative flex items-center justify-center transition active:scale-95 hover:opacity-80">
+              <div className="bg-[#00C48C] text-white p-1.5 rounded-lg flex items-center justify-center shadow-sm border border-[#00C48C]/20">
+                <TicketPercent size={20} className="fill-current" />
               </div>
-            ) : (
-              <Link href="/login" className="text-sm font-bold flex items-center gap-1 hover:text-red-200 transition">
-                <UserCircle size={20} /> Entrar
-              </Link>
-            )}
+            </button>
+
+            {/* Orders */}
+            <Link href="/pedidos" className="relative flex items-center justify-center text-white transition active:scale-95 hover:opacity-80" title="Meus Pedidos">
+              <ClipboardList size={26} strokeWidth={2.5} />
+            </Link>
+
+            {/* Cart */}
             <CartButton />
           </div>
         </div>
       </header>
 
-      {/* Location Bar */}
-      <div className="bg-white py-3 px-4 shadow-sm mb-4">
-        <div className="max-w-md mx-auto flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2 text-stone-600">
-            <MapPin size={18} className="text-primary" />
-            <p className="truncate w-48">Entregar em: <span className="font-semibold text-stone-900">Rua das Flores, 123</span></p>
-          </div>
-          <button className="text-primary font-medium text-xs" suppressHydrationWarning>Alterar</button>
-        </div>
-      </div>
-
       {!storeStatus.isOpen && (
-         <div className="max-w-md mx-auto mb-4 px-4 hidden md:block">
-           <StoreClosedBanner />
-         </div>
+        <div className="max-w-md mx-auto mb-4 px-4 hidden md:block">
+          <StoreClosedBanner />
+        </div>
       )}
       {!storeStatus.isOpen && (
-         <div className="md:hidden block mb-4">
-           <StoreClosedBanner />
-         </div>
+        <div className="md:hidden block mb-4">
+          <StoreClosedBanner />
+        </div>
       )}
 
       <main className="max-w-md mx-auto px-4 space-y-8">
@@ -113,13 +110,13 @@ export default async function Home({
         <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-stone-900 text-white shadow-xl shadow-stone-200">
           <div className="absolute top-0 right-0 w-32 h-32 bg-secondary opacity-20 rounded-full blur-3xl -mr-10 -mt-10"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary opacity-30 rounded-full blur-2xl -ml-10 -mb-10"></div>
-          
+
           <div className="relative p-6 flex flex-col justify-center h-40">
             <span className="bg-secondary text-white text-xs font-bold px-2 py-1 rounded-md w-max mb-2 uppercase tracking-wide">
               Promoção
             </span>
             <h2 className="text-2xl font-black leading-tight mb-1">
-              Festival<br/>Sushi & Sashimi
+              Festival<br />Sushi & Sashimi
             </h2>
             <p className="text-sm text-stone-300">Até 30% Off nos combinados</p>
           </div>
@@ -157,7 +154,7 @@ export default async function Home({
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
             {categories?.length === 0 ? (
-               <p className="text-sm text-stone-500 italic">Nenhuma categoria cadastrada.</p>
+              <p className="text-sm text-stone-500 italic">Nenhuma categoria cadastrada.</p>
             ) : (
               categories?.map((cat, i) => (
                 <div key={cat.id || i} className="flex flex-col items-center gap-2 min-w-[72px]">
@@ -166,11 +163,11 @@ export default async function Home({
                       <img src={cat.image_url} alt={cat.name} className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
                       <span className="text-3xl">
-                        {cat.name.toLowerCase().includes('temaki') ? '🍙' : 
-                         cat.name.toLowerCase().includes('yakisoba') ? '🍜' : 
-                         cat.name.toLowerCase().includes('combinado') ? '🍣' : 
-                         cat.name.toLowerCase().includes('entrada') ? '🥟' : 
-                         cat.name.toLowerCase().includes('bebida') ? '🥤' : '🥢'}
+                        {cat.name.toLowerCase().includes('temaki') ? '🍙' :
+                          cat.name.toLowerCase().includes('yakisoba') ? '🍜' :
+                            cat.name.toLowerCase().includes('combinado') ? '🍣' :
+                              cat.name.toLowerCase().includes('entrada') ? '🥟' :
+                                cat.name.toLowerCase().includes('bebida') ? '🥤' : '🥢'}
                       </span>
                     )}
                   </button>
@@ -191,13 +188,13 @@ export default async function Home({
               </div>
             ) : (
               products?.map((item) => {
-                const icon = item.name.toLowerCase().includes('temaki') ? '🍙' : 
-                             item.name.toLowerCase().includes('yakisoba') ? '🍜' : 
-                             item.name.toLowerCase().includes('combinado') ? '🍣' : 
-                             item.name.toLowerCase().includes('ceviche') ? '🥗' : '🍱';
+                const icon = item.name.toLowerCase().includes('temaki') ? '🍙' :
+                  item.name.toLowerCase().includes('yakisoba') ? '🍜' :
+                    item.name.toLowerCase().includes('combinado') ? '🍣' :
+                      item.name.toLowerCase().includes('ceviche') ? '🥗' : '🍱';
 
                 return (
-                  <ProductDetailModal 
+                  <ProductDetailModal
                     key={item.id}
                     product={{
                       id: item.id,

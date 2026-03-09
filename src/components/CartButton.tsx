@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingBag } from "lucide-react"
+import { ShoppingCart } from "lucide-react"
 import { useCartStore } from "@/store/cartStore"
 import { useEffect, useState } from "react"
 
@@ -15,14 +15,14 @@ export default function CartButton() {
   }, [])
 
   return (
-    <button 
+    <button
       onClick={openCart}
-      className="relative bg-white/20 p-2 rounded-full hover:bg-white/30 transition"
+      className="relative p-1 rounded-full text-white transition active:scale-95 hover:bg-white/10"
       suppressHydrationWarning
     >
-      <ShoppingBag size={22} className="text-white" />
+      <ShoppingCart size={26} strokeWidth={2.5} />
       {mounted && totalItems > 0 && (
-        <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-primary">
+        <span className="absolute -top-1 -right-1 bg-white text-primary text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-primary">
           {totalItems}
         </span>
       )}
